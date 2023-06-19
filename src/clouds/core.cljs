@@ -18,13 +18,15 @@
    [sprog.webgl.textures :refer [create-tex
                                  tex-data-array
                                  html-image-tex]]
-   [sprog.input.mouse :refer [mouse-pos mouse-down?]]
+   [sprog.input.mouse :refer [mouse-pos mouse-down?]]))
 
-   #_[fxrng.rng :refer [fxrand
-                      fxrand-int]]))
+(def render? (atom true))
+(add-watch render? nil
+           (fn [_ _ _ new]
+             (u/log "rendering?" new)))
 
 (defn expand-canvas [gl]
-  (maximize-canvas gl.canvas {:max-pixel-ratio 2
+  (maximize-canvas gl.canvas {
                               :square? false}))
 
 (defn set-resolution [gl]
@@ -42,32 +44,32 @@
       (do (maximize-canvas gl.canvas {:square? true})
           (canvas-resolution gl)))))
 
-(defn get-volumetric-data! [{:keys [gl frame volumetric-data-tex] :as state}]
-  (when (== frame 0)
-    (let [tex-size [c/atlas-tex-size c/atlas-tex-size]]
-      (run-purefrag-shader! gl
-                            a/atlas-frag
-                            tex-size
-                            {"size" tex-size}
-                            {:target volumetric-data-tex})))
-  state)
+(defn get-skybox! [gl resolution]
+  (let [tex (create-tex gl :u32 resolution)]
+    (run-purefrag-shader! gl
+                          s/worley-frag
+                          resolution
+                          {"size" resolution}
+                          {:target tex})
+    tex))
 
 (defn trace! [{:keys [gl
                       resolution
                       frame
                       ray-pos-texs
                       accumulation-texs
+                      attenuation-texs
                       ray-dir-texs
                       color-texs
                       ray-meta-texs
-                      trace?]
+                      worley-tex]
                :as state}]
-  (if true #_(or (zero? frame)
-          trace?)
+  (if @render?
     (let [[front-pos-tex back-pos-tex] ray-pos-texs
           [front-dir-tex back-dir-tex] ray-dir-texs
           [front-color-tex back-color-tex] color-texs
           [front-accumulation-tex back-accumulation-tex] accumulation-texs
+          [front-attenuation-tex back-attenuation-tex] attenuation-texs
           [front-meta-tex back-meta-tex] ray-meta-texs]
       (run-purefrag-shader! gl
                             s/trace-frag
@@ -80,30 +82,33 @@
                              "ray-dir-tex" front-dir-tex
                              "color-tex" front-color-tex
                              "accumulation-tex" front-accumulation-tex
-                             "ray-meta-tex" front-meta-tex}
+                             "attenuation-tex" front-attenuation-tex
+                             "ray-meta-tex" front-meta-tex
+                             "skybox" worley-tex}
                             {:target [back-color-tex
                                       back-pos-tex
                                       back-dir-tex
                                       back-accumulation-tex
+                                      back-attenuation-tex
                                       back-meta-tex]})
       (-> state
           (update :color-texs reverse)
           (update :ray-pos-texs reverse)
           (update :ray-dir-texs reverse)
           (update :accumulation-texs reverse)
+          (update :attenuation-texs reverse)
           (update :ray-meta-texs reverse)))
     state))
 
 (defn render! [{:keys [gl resolution 
-                       volumetric-data-tex 
+                       worley-tex 
                        accumulation-texs] :as state}]
   (run-purefrag-shader! gl 
                         s/render-frag 
                         resolution 
                         {"size" resolution
-                         "atlas" volumetric-data-tex
-                         "final" (first accumulation-texs)
-                         "now" (u/seconds-since-startup)})
+                         "skybox" worley-tex
+                         "final" (first accumulation-texs)})
   state)
 
 (defn update-page! [{:keys [] :as state}]
@@ -115,20 +120,26 @@
 
 (defn init-page! [gl]
   (expand-canvas gl)
+  
   (let [resolution (canvas-resolution gl)]
     {:gl gl
      :frame 0
      :resolution resolution
+     :worley-tex (get-skybox! gl resolution)
      :volumetric-data-tex (create-tex gl :u32 c/atlas-tex-size)
      :color-texs (u/genv 2 (create-tex gl :u32 resolution))
      :accumulation-texs (u/genv 2 (create-tex gl :u32 resolution))
-     :ray-meta-texs (u/genv 2  (create-tex gl :u32 resolution)) 
+     :attenuation-texs (u/genv 2 (create-tex gl :u32 resolution))
+     :ray-meta-texs (u/genv 2  (create-tex gl :u32 resolution))
      :ray-pos-texs (u/genv 2 (create-tex gl :u32 resolution))
-     :ray-dir-texs (u/genv 2 (create-tex gl :u32 resolution))}))
+     :ray-dir-texs (u/genv 2 (create-tex gl :u32 resolution))
+     :sphere-axes (vec (flatten (u/genv c/sphere-octaves (u/genv 3 (- (rand 2) 1)))))
+     :sphere-angles (u/genv c/sphere-octaves (rand u/TAU))}))
 
 (defn init []
-  (add-key-callback "t" #(do (u/log "gey")
-                             (merge-sprog-state! {:trace? true})))
+  (add-key-callback "r"
+                    (fn []
+                      (swap! render? not)))
   (start-sprog! init-page! update-page!))
 
 (defn ^:dev/after-load restart! []

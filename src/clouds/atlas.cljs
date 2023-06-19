@@ -134,8 +134,7 @@
 
 (def atlas-frag
   (u/unquotable
-   (iglu->glsl
-    s/header
+   (s/header
     remap-chunk
     worley-chunk
     simplex-3d-chunk
