@@ -1,14 +1,14 @@
 goog.provide('sprog.iglu.core');
 sprog.iglu.core.combine_chunks = (function sprog$iglu$core$combine_chunks(var_args){
 var args__5772__auto__ = [];
-var len__5766__auto___31193 = arguments.length;
-var i__5767__auto___31194 = (0);
+var len__5766__auto___31141 = arguments.length;
+var i__5767__auto___31142 = (0);
 while(true){
-if((i__5767__auto___31194 < len__5766__auto___31193)){
-args__5772__auto__.push((arguments[i__5767__auto___31194]));
+if((i__5767__auto___31142 < len__5766__auto___31141)){
+args__5772__auto__.push((arguments[i__5767__auto___31142]));
 
-var G__31195 = (i__5767__auto___31194 + (1));
-i__5767__auto___31194 = G__31195;
+var G__31143 = (i__5767__auto___31142 + (1));
+i__5767__auto___31142 = G__31143;
 continue;
 } else {
 }
@@ -21,32 +21,32 @@ return sprog.iglu.core.combine_chunks.cljs$core$IFn$_invoke$arity$variadic(argse
 
 (sprog.iglu.core.combine_chunks.cljs$core$IFn$_invoke$arity$variadic = (function (chunks){
 var merged_functions = cljs.core.apply.cljs$core$IFn$_invoke$arity$2(cljs.core.partial.cljs$core$IFn$_invoke$arity$2(cljs.core.merge_with,cljs.core.merge),cljs.core.map.cljs$core$IFn$_invoke$arity$2(new cljs.core.Keyword(null,"functions","functions",184951466),chunks));
-var G__31168 = cljs.core.apply.cljs$core$IFn$_invoke$arity$2(cljs.core.partial.cljs$core$IFn$_invoke$arity$2(cljs.core.merge_with,cljs.core.merge),chunks);
+var G__31123 = cljs.core.apply.cljs$core$IFn$_invoke$arity$2(cljs.core.partial.cljs$core$IFn$_invoke$arity$2(cljs.core.merge_with,cljs.core.merge),chunks);
 if(cljs.core.truth_(merged_functions)){
-return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(G__31168,new cljs.core.Keyword(null,"functions","functions",184951466),merged_functions);
+return cljs.core.assoc.cljs$core$IFn$_invoke$arity$3(G__31123,new cljs.core.Keyword(null,"functions","functions",184951466),merged_functions);
 } else {
-return G__31168;
+return G__31123;
 }
 }));
 
 (sprog.iglu.core.combine_chunks.cljs$lang$maxFixedArity = (0));
 
 /** @this {Function} */
-(sprog.iglu.core.combine_chunks.cljs$lang$applyTo = (function (seq31167){
+(sprog.iglu.core.combine_chunks.cljs$lang$applyTo = (function (seq31122){
 var self__5752__auto__ = this;
-return self__5752__auto__.cljs$core$IFn$_invoke$arity$variadic(cljs.core.seq(seq31167));
+return self__5752__auto__.cljs$core$IFn$_invoke$arity$variadic(cljs.core.seq(seq31122));
 }));
 
 sprog.iglu.core.apply_macros = (function sprog$iglu$core$apply_macros(var_args){
 var args__5772__auto__ = [];
-var len__5766__auto___31197 = arguments.length;
-var i__5767__auto___31198 = (0);
+var len__5766__auto___31144 = arguments.length;
+var i__5767__auto___31145 = (0);
 while(true){
-if((i__5767__auto___31198 < len__5766__auto___31197)){
-args__5772__auto__.push((arguments[i__5767__auto___31198]));
+if((i__5767__auto___31145 < len__5766__auto___31144)){
+args__5772__auto__.push((arguments[i__5767__auto___31145]));
 
-var G__31199 = (i__5767__auto___31198 + (1));
-i__5767__auto___31198 = G__31199;
+var G__31146 = (i__5767__auto___31145 + (1));
+i__5767__auto___31145 = G__31146;
 continue;
 } else {
 }
@@ -57,13 +57,13 @@ var argseq__5773__auto__ = ((((1) < args__5772__auto__.length))?(new cljs.core.I
 return sprog.iglu.core.apply_macros.cljs$core$IFn$_invoke$arity$variadic((arguments[(0)]),argseq__5773__auto__);
 });
 
-(sprog.iglu.core.apply_macros.cljs$core$IFn$_invoke$arity$variadic = (function (p__31172,p__31173){
-var map__31174 = p__31172;
-var map__31174__$1 = cljs.core.__destructure_map(map__31174);
-var shader = map__31174__$1;
-var macros = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__31174__$1,new cljs.core.Keyword(null,"macros","macros",811339431));
-var vec__31175 = p__31173;
-var exclude_defaults_QMARK_ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__31175,(0),null);
+(sprog.iglu.core.apply_macros.cljs$core$IFn$_invoke$arity$variadic = (function (p__31127,p__31128){
+var map__31129 = p__31127;
+var map__31129__$1 = cljs.core.__destructure_map(map__31129);
+var shader = map__31129__$1;
+var macros = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__31129__$1,new cljs.core.Keyword(null,"macros","macros",811339431));
+var vec__31130 = p__31128;
+var exclude_defaults_QMARK_ = cljs.core.nth.cljs$core$IFn$_invoke$arity$3(vec__31130,(0),null);
 var chunks = cljs.core.atom.cljs$core$IFn$_invoke$arity$1(null);
 var new_shader = cljs.core.apply.cljs$core$IFn$_invoke$arity$2(sprog.iglu.core.combine_chunks,cljs.core.concat.cljs$core$IFn$_invoke$arity$2((new cljs.core.List(null,clojure.walk.prewalk((function (subexp){
 if(cljs.core.seq_QMARK_(subexp)){
@@ -105,11 +105,11 @@ return sprog.iglu.core.apply_macros.cljs$core$IFn$_invoke$arity$variadic(new_sha
 (sprog.iglu.core.apply_macros.cljs$lang$maxFixedArity = (1));
 
 /** @this {Function} */
-(sprog.iglu.core.apply_macros.cljs$lang$applyTo = (function (seq31169){
-var G__31170 = cljs.core.first(seq31169);
-var seq31169__$1 = cljs.core.next(seq31169);
+(sprog.iglu.core.apply_macros.cljs$lang$applyTo = (function (seq31124){
+var G__31125 = cljs.core.first(seq31124);
+var seq31124__$1 = cljs.core.next(seq31124);
 var self__5751__auto__ = this;
-return self__5751__auto__.cljs$core$IFn$_invoke$arity$variadic(G__31170,seq31169__$1);
+return self__5751__auto__.cljs$core$IFn$_invoke$arity$variadic(G__31125,seq31124__$1);
 }));
 
 sprog.iglu.core.gensym_replace = (function sprog$iglu$core$gensym_replace(replacements,expression){
@@ -117,36 +117,36 @@ return clojure.walk.prewalk_replace(cljs.core.into.cljs$core$IFn$_invoke$arity$2
 return new cljs.core.PersistentVector(null, 2, 5, cljs.core.PersistentVector.EMPTY_NODE, [k,cljs.core.gensym.cljs$core$IFn$_invoke$arity$1(cljs.core.symbol.cljs$core$IFn$_invoke$arity$1(k))], null);
 }),replacements)),expression);
 });
-sprog.iglu.core.preprocess = (function sprog$iglu$core$preprocess(p__31178){
-var map__31180 = p__31178;
-var map__31180__$1 = cljs.core.__destructure_map(map__31180);
-var shader = map__31180__$1;
-var constants = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__31180__$1,new cljs.core.Keyword(null,"constants","constants",1535944028));
-return sprog.iglu.core.apply_macros((function (){var G__31184 = shader;
+sprog.iglu.core.preprocess = (function sprog$iglu$core$preprocess(p__31133){
+var map__31134 = p__31133;
+var map__31134__$1 = cljs.core.__destructure_map(map__31134);
+var shader = map__31134__$1;
+var constants = cljs.core.get.cljs$core$IFn$_invoke$arity$2(map__31134__$1,new cljs.core.Keyword(null,"constants","constants",1535944028));
+return sprog.iglu.core.apply_macros((function (){var G__31135 = shader;
 if(cljs.core.truth_(constants)){
-return clojure.walk.prewalk_replace(constants,G__31184);
+return clojure.walk.prewalk_replace(constants,G__31135);
 } else {
-return G__31184;
+return G__31135;
 }
 })());
 });
 sprog.iglu.core.iglu__GT_glsl = (function sprog$iglu$core$iglu__GT_glsl(var_args){
-var G__31189 = arguments.length;
-switch (G__31189) {
+var G__31139 = arguments.length;
+switch (G__31139) {
 case 1:
 return sprog.iglu.core.iglu__GT_glsl.cljs$core$IFn$_invoke$arity$1((arguments[(0)]));
 
 break;
 default:
 var args_arr__5791__auto__ = [];
-var len__5766__auto___31209 = arguments.length;
-var i__5767__auto___31210 = (0);
+var len__5766__auto___31150 = arguments.length;
+var i__5767__auto___31151 = (0);
 while(true){
-if((i__5767__auto___31210 < len__5766__auto___31209)){
-args_arr__5791__auto__.push((arguments[i__5767__auto___31210]));
+if((i__5767__auto___31151 < len__5766__auto___31150)){
+args_arr__5791__auto__.push((arguments[i__5767__auto___31151]));
 
-var G__31211 = (i__5767__auto___31210 + (1));
-i__5767__auto___31210 = G__31211;
+var G__31152 = (i__5767__auto___31151 + (1));
+i__5767__auto___31151 = G__31152;
 continue;
 } else {
 }
@@ -168,11 +168,11 @@ return sprog.iglu.core.iglu__GT_glsl.cljs$core$IFn$_invoke$arity$1(cljs.core.app
 }));
 
 /** @this {Function} */
-(sprog.iglu.core.iglu__GT_glsl.cljs$lang$applyTo = (function (seq31187){
-var G__31188 = cljs.core.first(seq31187);
-var seq31187__$1 = cljs.core.next(seq31187);
+(sprog.iglu.core.iglu__GT_glsl.cljs$lang$applyTo = (function (seq31137){
+var G__31138 = cljs.core.first(seq31137);
+var seq31137__$1 = cljs.core.next(seq31137);
 var self__5751__auto__ = this;
-return self__5751__auto__.cljs$core$IFn$_invoke$arity$variadic(G__31188,seq31187__$1);
+return self__5751__auto__.cljs$core$IFn$_invoke$arity$variadic(G__31138,seq31137__$1);
 }));
 
 (sprog.iglu.core.iglu__GT_glsl.cljs$lang$maxFixedArity = (1));

@@ -13,21 +13,23 @@
    [sprog.dom.canvas :refer [maximize-canvas
                              resize-gl-canvas
                              canvas-resolution]]
-   [sprog.webgl.shaders :refer [run-purefrag-shader!
-                                run-shaders!]]
-   [sprog.webgl.textures :refer [create-tex
-                                 tex-data-array
-                                 html-image-tex]]
+   [sprog.webgl.shaders :refer [run-purefrag-shader!]]
+   [sprog.webgl.textures :refer [create-tex]]
+   [sprog.tools.math :refer [cross normalize]]
    [sprog.input.mouse :refer [mouse-pos mouse-down?]]))
 
 (def render? (atom true))
 (add-watch render? nil
            (fn [_ _ _ new]
-             (u/log "rendering?" new)))
+             (u/log "rendering: " new)))
+
+(def bilateral? (atom true))
+(add-watch bilateral? nil 
+           (fn [_ _ _ new]
+             (u/log "bilateral: " new)))
 
 (defn expand-canvas [gl]
-  (maximize-canvas gl.canvas {
-                              :square? false}))
+  (maximize-canvas gl.canvas {}))
 
 (defn set-resolution [gl]
   (let [manual-resolution (vec
@@ -43,6 +45,14 @@
           manual-resolution)
       (do (maximize-canvas gl.canvas {:square? true})
           (canvas-resolution gl)))))
+
+(defn get-camera [camera-position look-at]
+  (let [cw (normalize (map - look-at camera-position))
+        cu (normalize (cross cw c/up))
+        cv (cross cu cw)]
+    [cu
+     cv
+     cw]))
 
 (defn get-skybox! [gl resolution]
   (let [tex (create-tex gl :u32 resolution)]
@@ -62,7 +72,10 @@
                       ray-dir-texs
                       color-texs
                       ray-meta-texs
-                      worley-tex]
+                      worley-tex
+                      sphere-axes 
+                      sphere-angles
+                      camera-matrix]
                :as state}]
   (if @render?
     (let [[front-pos-tex back-pos-tex] ray-pos-texs
@@ -84,7 +97,11 @@
                              "accumulation-tex" front-accumulation-tex
                              "attenuation-tex" front-attenuation-tex
                              "ray-meta-tex" front-meta-tex
-                             "skybox" worley-tex}
+                             "skybox" worley-tex
+
+                             "sphere-axes" sphere-axes
+                             "sphere-angles" sphere-angles
+                             "camera" camera-matrix}
                             {:target [back-color-tex
                                       back-pos-tex
                                       back-dir-tex
@@ -103,12 +120,13 @@
 (defn render! [{:keys [gl resolution 
                        worley-tex 
                        accumulation-texs] :as state}]
-  (run-purefrag-shader! gl 
-                        s/render-frag 
-                        resolution 
+  (run-purefrag-shader! gl
+                        s/render-frag
+                        resolution
                         {"size" resolution
                          "skybox" worley-tex
-                         "final" (first accumulation-texs)})
+                         "final" (first accumulation-texs)
+                         "bilateral?" @bilateral?})
   state)
 
 (defn update-page! [{:keys [] :as state}]
@@ -125,6 +143,7 @@
     {:gl gl
      :frame 0
      :resolution resolution
+     :camera-matrix (get-camera c/cam-pos c/look-at)
      :worley-tex (get-skybox! gl resolution)
      :volumetric-data-tex (create-tex gl :u32 c/atlas-tex-size)
      :color-texs (u/genv 2 (create-tex gl :u32 resolution))
@@ -137,9 +156,7 @@
      :sphere-angles (u/genv c/sphere-octaves (rand u/TAU))}))
 
 (defn init []
-  (add-key-callback "r"
-                    (fn []
-                      (swap! render? not)))
+  
   (start-sprog! init-page! update-page!))
 
 (defn ^:dev/after-load restart! []
@@ -147,4 +164,10 @@
   (init))
 
 (defn pre-init []
+  (add-key-callback "r"
+                    (fn []
+                      (swap! render? not)))
+  (add-key-callback "b"
+                    (fn []
+                      (swap! bilateral? not)))
   (js/window.addEventListener "load" (fn [_] (init))))
