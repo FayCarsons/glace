@@ -1,6 +1,6 @@
 WIP Clojurescript + WebGL progressive pathtracer, supporting raytracing and raymarching. Includes a system for generating materials, including conversion of RGB color palettes to materials. 
 
-Currently in need of some cleaning up, has test scenes, a sphere packer algorithm. Could be generalized and made a bt more accessible.
+Currently in need of some cleaning up, has test scenes, a sphere packer algorithm. Could be generalized and made a bit more accessible.
 
 Here are some example outputs
 ![sphere-packr8-NOaberration](https://github.com/FayCarsons/glace/assets/95594152/f3d6440c-274d-4ae6-9320-2f6a7eeccee2)
