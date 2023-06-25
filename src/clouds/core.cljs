@@ -2,7 +2,6 @@
   (:require
    [clouds.shaders :as s]
    [clouds.config :as c]
-   [clouds.atlas :as a]
    [sprog.util :as u]
    [clojure.string :as str]
    [sprog.webgl.core :refer [start-sprog!
@@ -15,15 +14,18 @@
                              canvas-resolution]]
    [sprog.webgl.shaders :refer [run-purefrag-shader!]]
    [sprog.webgl.textures :refer [create-tex]]
-   [sprog.tools.math :refer [cross normalize]]
+   [sprog.tools.math :refer [cross normalize magnitude]]
+   [fxrng.rng :refer [fxrand]]
    [sprog.input.mouse :refer [mouse-pos mouse-down?]]))
+
+
 
 (def render? (atom true))
 (add-watch render? nil
            (fn [_ _ _ new]
              (u/log "rendering: " new)))
 
-(def bilateral? (atom true))
+(defonce bilateral? (atom false))
 (add-watch bilateral? nil 
            (fn [_ _ _ new]
              (u/log "bilateral: " new)))
@@ -45,6 +47,10 @@
           manual-resolution)
       (do (maximize-canvas gl.canvas {:square? true})
           (canvas-resolution gl)))))
+
+
+
+
 
 (defn get-camera [camera-position look-at]
   (let [cw (normalize (map - look-at camera-position))
@@ -73,8 +79,7 @@
                       color-texs
                       ray-meta-texs
                       worley-tex
-                      sphere-axes 
-                      sphere-angles
+                      sphere-data
                       camera-matrix]
                :as state}]
   (if @render?
@@ -91,17 +96,16 @@
                              "frame" frame
                              "rand-offset" (u/genv 3 (- (rand 2000)
                                                         1000))
+                             
                              "ray-pos-tex" front-pos-tex
                              "ray-dir-tex" front-dir-tex
                              "color-tex" front-color-tex
                              "accumulation-tex" front-accumulation-tex
                              "attenuation-tex" front-attenuation-tex
                              "ray-meta-tex" front-meta-tex
-                             "skybox" worley-tex
 
-                             "sphere-axes" sphere-axes
-                             "sphere-angles" sphere-angles
-                             "camera" camera-matrix}
+                             "skybox" worley-tex
+                             "camera" (vec (flatten camera-matrix))}
                             {:target [back-color-tex
                                       back-pos-tex
                                       back-dir-tex
@@ -144,16 +148,13 @@
      :frame 0
      :resolution resolution
      :camera-matrix (get-camera c/cam-pos c/look-at)
-     :worley-tex (get-skybox! gl resolution)
-     :volumetric-data-tex (create-tex gl :u32 c/atlas-tex-size)
+     :worley-tex (get-skybox! gl resolution) 
      :color-texs (u/genv 2 (create-tex gl :u32 resolution))
      :accumulation-texs (u/genv 2 (create-tex gl :u32 resolution))
      :attenuation-texs (u/genv 2 (create-tex gl :u32 resolution))
      :ray-meta-texs (u/genv 2  (create-tex gl :u32 resolution))
      :ray-pos-texs (u/genv 2 (create-tex gl :u32 resolution))
-     :ray-dir-texs (u/genv 2 (create-tex gl :u32 resolution))
-     :sphere-axes (vec (flatten (u/genv c/sphere-octaves (u/genv 3 (- (rand 2) 1)))))
-     :sphere-angles (u/genv c/sphere-octaves (rand u/TAU))}))
+     :ray-dir-texs (u/genv 2 (create-tex gl :u32 resolution))}))
 
 (defn init []
   

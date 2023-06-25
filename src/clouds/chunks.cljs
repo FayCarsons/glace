@@ -3,6 +3,15 @@
             [sprog.iglu.chunks.raytracing]
             [sprog.iglu.core :refer [combine-chunks]]))
 
+(def plane-intersection 
+  '{:functions 
+    {intersect-plane 
+     {([Ray vec3 float] float)
+      ([ray normal depth]
+       (/ (- (+ (dot ray.pos normal)
+                depth))
+          (dot ray.dir normal)))}}})
+
 (def worley-chunk
   (u/unquotable
    '{:functions

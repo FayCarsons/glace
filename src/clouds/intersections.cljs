@@ -1,11 +1,41 @@
 (ns clouds.intersections
   (:require [sprog.util :as u]
             [clouds.config :as c]
-            [sprog.iglu.core :refer [iglu->glsl]]))
+            [sprog.iglu.core :refer [iglu->glsl]]
+            [clouds.materials :as mat]))
+
+(def dof-test
+  (u/unquotable
+   '{:functions
+     {hit-world
+      {([Ray] Record)
+       ([ray]
+        (=Record record ~mat/default-record)
+
+
+        (=Plane plane (Plane (normalize (vec3 0 1 0))
+                             10
+                             ~(mat/create-material {:type :lambertian
+                                                  :albedo [0.99999 0.999 0.3]
+                                                  :roughness 0.75})))
+        (=float current-distance (intersect-plane ray plane.normal plane.depth))
+
+        ("if" (> current-distance 0)
+              (= record.hit true)
+              (= record.distance current-distance)
+              (= record.point (ray-at ray record.distance))
+              (= record.normal plane.normal)
+              (= record.material plane.material))
+
+        (=Sphere sphere (Sphere (vec3 0)
+                                0
+                                ~mat/diffuse-material))
+
+        ~c/sphere-packing-expression
+        record)}}}))
 
 (def coral-sdf
   '{sdf
-
     {([vec3] float)
      ([pos]
       (= pos (twistX pos 2))
@@ -50,10 +80,10 @@
     hit-world
     {([Ray] Record)
      ([ray]
-      (=Record record ~c/default-record)
+      (=Record record ~mat/default-record)
       (do (=Sphere sphere-light-one (Sphere (vec3 -0.17 0.125 -0.55)
                                             0.03
-                                            ~(c/create-material {:type :lommel
+                                            ~(mat/create-material {:type :lommel
 
                                                                  :emissive [2 0.25 0.25]
                                                                  :roughness 0.9})))
@@ -72,7 +102,7 @@
 
           (= sphere-light-one (Sphere (vec3 0.2 -0.1 -0.55)
                                       0.02
-                                      ~(c/create-material {:type :lommel
+                                      ~(mat/create-material {:type :lommel
 
                                                            :emissive [0.25 0.25 2]
                                                            :roughness 0.9})))
@@ -91,7 +121,7 @@
 
           (=Sphere sphere-light-two (Sphere (vec3 0.5 0 -1.1)
                                             0.25
-                                            ~(c/create-material {:type :lambertian
+                                            ~(mat/create-material {:type :lambertian
                                                                  :emissive [2 2 2]
                                                                  :roughness 0.01})))
           (= distance (.x (findSphereIntersections ray
@@ -181,28 +211,28 @@
       hit-world
       {([Ray] Record)
        ([ray]
-        (=Record record ~c/default-record)
-        #_(do (=Sphere sphere-light-one (Sphere (vec3 0 0 -0.375)
+        (=Record record ~mat/default-record)
+        (do (=Sphere sphere-light-one (Sphere (vec3 0 0 0)
                                               0.02
-                                              ~(c/create-material
+                                              ~(mat/create-material
                                                 {:type :lambertian
                                                  :specular [0.75]
                                                  :emissive [4 4 4]
                                                  :roughness 0.5})))
-            (=float distance (.x (findSphereIntersections ray
+            (=float dist (.x (findSphereIntersections ray
                                                           sphere-light-one.pos
                                                           sphere-light-one.radius)))
-            ("if" (&& (> distance 0)
-                      (< distance record.distance))
+            ("if" (&& (> dist 0)
+                      (< dist record.distance))
                   (= record.hit true)
-                  (= record.distance distance)
+                  (= record.distance dist)
                   (= record.point (ray-at ray record.distance))
                   (= record.normal (normalize (- record.point
                                                  sphere-light-one.pos)))
 
                   (= record.material sphere-light-one.material)))
 
-        (=float dist (raymarch ray
+        (= dist (raymarch ray
                               {:max-distance 1000
                                :max-steps 64
                                :step-factor 1}))
@@ -236,10 +266,10 @@
      {hit-world
       {([Ray] Record)
        ([ray]
-        (=Record record ~c/default-record)
+        (=Record record ~mat/default-record)
         (=Sphere sphere (Sphere (vec3 0)
                                 0
-                                ~c/diffuse-material))
+                                ~mat/diffuse-material))
         (=float current-distance ~c/u32-max)
 
         ~(cons 'do
@@ -252,14 +282,16 @@
                              (vec3 ~position 0.5)
                              0.125
                              ~(if par
-                                (c/create-material {:type :blinn-phong
+                                (mat/create-material {:type :ggx
                                                     :albedo [(+ (rand 0.75) 0.1)
                                                              0.1
                                                              0.1]
                                                     :specular [0.99 0.01 0.01]
                                                     :roughness 0.01})
 
-                                c/glass-material)))
+                                (mat/create-material {:type :blinn-phong
+                                                    :specular [0.99]
+                                                    :roughness 0.75}))))
 
                          (= current-distance (.x
                                               (findSphereIntersections ray
@@ -282,10 +314,11 @@
                                              0
                                              0.5)
                                        0.5
-                                       ~(c/create-material {:albedo [0.9]
-                                                            :type :specular
+                                       ~(mat/create-material {:albedo [0.9]
+                                                            :type :lambertian
                                                             :specular [0.9]
-                                                            :roughness 0.99})))
+                                                            :roughness 0.3
+                                                            :ior 2})))
 
         (= current-distance (.x (findSphereIntersections ray
                                                          middle-sphere.pos
@@ -382,7 +415,7 @@
        ;lights
         (do (=Sphere sphere-light-one (Sphere (vec3 0.5 0.5 0.5)
                                               0.1
-                                              ~(c/create-material {:type :lommel
+                                              ~(mat/create-material {:type :lambertian
                                                                    :emissive [2 1 1]
                                                                    :roughness 0.01})))
             (= current-distance (.x (findSphereIntersections ray
@@ -411,7 +444,7 @@
                   (= record.point (ray-at ray record.distance))
                   (= record.normal (normalize box.frontNorm))
 
-                  (= record.material ~c/emitter-material))
+                  (= record.material ~mat/emitter-material))
 
             (= box (findBoxIntersection ray
                                         (vec3 -5 0 2)
@@ -424,7 +457,7 @@
                   (= record.point (ray-at ray record.distance))
                   (= record.normal (normalize box.frontNorm))
 
-                  (= record.material ~c/emitter-material))
+                  (= record.material ~mat/emitter-material))
 
             (= box (findBoxIntersection ray
                                         (vec3 0 1.1 0)
@@ -437,7 +470,7 @@
                   (= record.point (ray-at ray record.distance))
                   (= record.normal (normalize box.frontNorm))
 
-                  (= record.material ~c/emitter-material)))
+                  (= record.material ~mat/emitter-material)))
 
 
         record)}}}))

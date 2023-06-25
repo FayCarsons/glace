@@ -2,8 +2,10 @@
   (:require [sprog.util :as u]
             [clouds.config :as c]
             [clouds.chunks :refer [worley-chunk
-                                   raymarch-chunk]]
+                                   raymarch-chunk
+                                   plane-intersection]]
             [clouds.intersections :as i]
+            [clouds.materials :as mat]
             [clojure.walk :refer [postwalk-replace]]
             [sprog.iglu.core :refer [iglu->glsl
                                      combine-chunks]]
@@ -26,6 +28,10 @@
                                                        y-rotation-matrix-chunk
                                                        axis-rotation-chunk]]
             [sprog.iglu.chunks.color :refer [hsv-to-rgb-chunk]]
+            [sprog.iglu.chunks.postprocessing :refer [square-neighborhood
+                                                      star-neighborhood
+                                                      plus-neighborhood
+                                                      get-bloom-chunk]]
             [sprog.iglu.chunks.misc :refer [bilinear-usampler-chunk
                                             pos-chunk
                                             gradient-chunk]]
@@ -48,6 +54,7 @@
    (header
     pos-chunk
     bilinear-usampler-chunk
+    (get-bloom-chunk :u32 (star-neighborhood 2) 0.333)
     '{:outputs {fragColor vec4}
       :uniforms {size vec2
                  final usampler2D
@@ -65,61 +72,28 @@
                    ([rgb]
                     (pow rgb (vec3 (/ 1 2.2))))}
                   pixel-color
-                  {([ivec2] vec3)
+                  {([vec2] vec3)
                    ([coords]
                     (-> final
-                        (texelFetch coords "0")
+                        (bloom coords 0 0.1)
                         .rgb
                         vec3
-                        (/ ~u32-max)
+                        
                         (* ~c/max-brightness)
-                        aces-tonemap))}
-                  normPDF
-                  {([vec3 float] float)
-                   ([x sigma]
-                    (* 0.39894
-                       (/ (exp (/ (* -0.5 (dot x x)) (* sigma sigma)))
-                          sigma)))}}
-      :main ((=vec3 center-color (pixel-color (ivec2 gl_FragCoord.xy)))
-             ("if" bilateral?
-                   (=float factor-sum 0)
-                   (=vec3 color-sum (vec3 0))
-                   ~(cons 'do
-                          (apply
-                           concat
-                           (for [x (range (- c/bilateral-kernel-size)
-                                          (inc c/bilateral-kernel-size))
-                                 y (range (- c/bilateral-kernel-size)
-                                          (inc c/bilateral-kernel-size))]
-                             (postwalk-replace
-                              {:other-color (gensym "other-color")
-                               :color-diff (gensym "color-diff")
-                               :factor (gensym "factor")}
-                              '((=vec3 :other-color
-                                       (pixel-color (+ (ivec2 gl_FragCoord.xy)
-                                                       (ivec2 ~(str x)
-                                                              ~(str y)))))
-                                (=float :factor
-                                        (* (normPDF (- :other-color 
-                                                       center-color)
-                                                    ~c/bilateral-color-sigma)
-                                           ~(letfn
-                                             [(norm-pdf [x]
-                                                (* 0.39894
-                                                   (/ (Math/exp
-                                                       (/ (* -0.5 x x)
-                                                          (* c/bilateral-sigma
-                                                             c/bilateral-sigma)))
-                                                      c/bilateral-sigma)))]
-                                              (* (norm-pdf x)
-                                                 (norm-pdf y)))))
-                                (+= factor-sum :factor)
-                                (+= color-sum (* :factor :other-color)))))))
-                   (= fragColor (vec4 (gamma-correction (/ color-sum factor-sum))
-                                      1)))
-             ("else"
-              (= fragColor (vec4 (gamma-correction center-color)
-                                 1))))})))
+                        aces-tonemap))}}
+      :main ((=vec2 pos (/ gl_FragCoord.xy size))
+             (do (=float r (.r (pixel-color (clamp (- pos
+                                                      ~c/aberration-offset)
+                                                   (vec2 0)
+                                                   (vec2 1)))))
+                 (=float g (.g (pixel-color pos)))
+                 (=float b (.b (pixel-color (clamp (+ pos
+                                                      ~c/aberration-offset)
+                                                   (vec2 0)
+                                                   (vec2 1))))))
+             (=vec3 color (gamma-correction (vec3 r g b)))
+             (= fragColor (vec4 (gamma-correction (aces-tonemap color))
+                                1)))})))
 
 
 
@@ -131,11 +105,11 @@
     gradient-chunk
 
     sphere-intersection-chunk
-    plane-intersection-chunk
+    plane-intersection
     box-intersection-chunk
 
     raymarch-chunk
-    i/raymarch-test-chunk
+    i/dof-test
     sphere-sdf-chunk
     box-frame-sdf-chunk
     box-sdf-chunk
@@ -147,13 +121,12 @@
     smooth-union-chunk
     smooth-intersectioon-chunk
 
-    
+
 
     simplex-3d-chunk
     hsv-to-rgb-chunk
     pcg-hash-chunk
-    '{:constants ~(merge {}
-                         c/materials-map)
+    '{:constants ~mat/materials-map
       :defines {(fudge x) (* x ~c/fudge-factor)}
       :outputs {Color uvec4
                 Position uvec4
@@ -177,9 +150,7 @@
                  attenuation-tex usampler2D
                  ray-meta-tex usampler2D
                  skybox usampler2D
-                 frame float
-                 sphere-angles [float ~(str c/sphere-octaves)]
-                 sphere-axes [vec3 ~(str c/sphere-octaves)]}
+                 frame float}
       :structs {Ray
                 [pos vec3
                  dir vec3
@@ -190,8 +161,8 @@
                  radius float
                  material Material]
                 Plane
-                [pos vec3
-                 normal vec3
+                [normal vec3
+                 depth float
                  material Material]
                 Material
                 [type int
@@ -207,7 +178,32 @@
                  normal vec3
                  material Material]}
       :functions
-      {hemisphere-uniform
+      {random-point-in-circle
+       {([] vec2)
+        ([]
+         (=vec2 random (.xy (rand-pcg (+ (* gl_FragCoord.xyz
+                                            ~c/rand-scale)
+                                         rand-offset))))
+         (=float angle (* (.x random)
+                          ~u/TAU))
+         (=float radius (sqrt random.y))
+         (* radius (vec2 (cos angle)
+                         (sin angle))))}
+       random-point-in-star
+       {([float] vec2)
+        ([sides]
+         (=vec3 random (rand-pcg (+ (* gl_FragCoord.xyz
+                                       ~c/rand-scale)
+                                    rand-offset)))
+         (=float n (/ (floor (* random.x sides)) sides))
+         (=float angle-one (* n ~u/TAU))
+         (=float angle-two (+ angle-one
+                              (/ ~u/TAU sides)))
+         (=vec2 s1 (vec2 (cos angle-one) (sin angle-one)))
+         (=vec2 s2 (vec2 (cos angle-two) (sin angle-two)))
+         (+ (* random.y s1)
+            (* random.z s2)))}
+       hemisphere-uniform
        {([vec3] vec4)
         ([normal]
          (=vec3 rand-vec (rand-pcg (+ rand-offset
@@ -506,6 +502,30 @@
                                         vec3
                                         (/ ~u32-max)))
 
+             (=vec2 lense (random-point-in-star 5))
+             (*= lense (* ~c/depth-of-field-strength
+                          ~c/depth-of-field-distance))
+             (=vec2 bi-pos (-> pos
+                               uni->bi
+                               (- (/ lense
+                                     ~c/depth-of-field-distance))))
+
+             (=vec3 current-direction (if (== step "0")
+                                        (normalize (* (inverse camera)
+                                                      (vec3 bi-pos
+                                                            ~c/field-of-view)))
+                                        #_(-> pos
+                                              (* 2)
+                                              (- 1)
+                                              (vec3 1)
+                                              normalize)
+                                        (-> ray-dir-tex
+                                            (texelFetch frag-pos "0")
+                                            .xyz
+                                            vec3
+                                            (/ ~u32-max)
+                                            uni->bi)))
+
              (=Ray ray
                    (Ray (if (== step "0")
                           ~(cons 'vec3 c/cam-pos)
@@ -515,18 +535,7 @@
                               vec3
                               (/ ~u32-max)
                               uni->bi))
-                        (if (== step "0")
-                          (-> pos
-                              (* 2)
-                              (- 1)
-                              (vec3 1)
-                              normalize)
-                          (-> ray-dir-tex
-                              (texelFetch frag-pos "0")
-                              .xyz
-                              vec3
-                              (/ ~u32-max)
-                              uni->bi))
+                        current-direction
                         (if (== step "0")
                           (vec3 0)
                           (-> color-tex
