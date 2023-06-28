@@ -26,8 +26,10 @@
                             :or {dimensions 3
                                  init-size (rand 0.333)}}]
   (letfn [(get-rand-point []
-                          (u/genv dimensions (fxrand 0 1 0.5))
-                          #_(map (partial u/scale -2 2 0 1)
+                          
+                          (map #(->> %
+                                     (u/scale -2 2 0 1)
+                                     (u/clamp 0 1))
                                (fxrand-normals dimensions)))]
     (loop [spheres [(Sphere. (get-rand-point)
                              (if (fn? init-size)
@@ -44,11 +46,12 @@
                                     (every? #(< min-distance %
                                                 (- 1 min-distance))
                                             point))
-                             (Sphere. point (if max-radius
-                                              (min min-distance max-radius)
-                                              min-distance))
+                             (Sphere. point
+                                      (if max-radius
+                                        (min min-distance max-radius)
+                                        min-distance))
                              (recur (get-rand-point)))))]
-        (if (< (count spheres) n)
+        (if (< (count spheres) (dec n))
           (recur (conj spheres new-sphere))
           (conj spheres new-sphere))))))
 

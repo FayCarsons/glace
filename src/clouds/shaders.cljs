@@ -4,7 +4,7 @@
             [clouds.chunks :refer [worley-chunk
                                    raymarch-chunk
                                    plane-intersection]]
-            [clouds.intersections :as i]
+            [clouds.scenes :as i]
             [clouds.materials :as mat]
             [clojure.walk :refer [postwalk-replace]]
             [sprog.iglu.core :refer [iglu->glsl
@@ -514,11 +514,6 @@
                                         (normalize (* (inverse camera)
                                                       (vec3 bi-pos
                                                             ~c/field-of-view)))
-                                        #_(-> pos
-                                              (* 2)
-                                              (- 1)
-                                              (vec3 1)
-                                              normalize)
                                         (-> ray-dir-tex
                                             (texelFetch frag-pos "0")
                                             .xyz

@@ -1,4 +1,4 @@
-(ns clouds.intersections
+(ns clouds.scenes
   (:require [sprog.util :as u]
             [clouds.config :as c]
             [sprog.iglu.core :refer [iglu->glsl]]
@@ -13,19 +13,21 @@
         (=Record record ~mat/default-record)
 
 
-        (=Plane plane (Plane (normalize (vec3 0 1 0))
-                             10
-                             ~(mat/create-material {:type :lambertian
-                                                  :albedo [0.99999 0.999 0.3]
-                                                  :roughness 0.75})))
-        (=float current-distance (intersect-plane ray plane.normal plane.depth))
+        (=BoxIntersection box (findBoxIntersection ray
+                                                   (vec3 0 -1 0)
+                                                   (vec3 10 0 10)))
+        (=float current-distance box.frontDist)
 
         ("if" (> current-distance 0)
               (= record.hit true)
               (= record.distance current-distance)
               (= record.point (ray-at ray record.distance))
-              (= record.normal plane.normal)
-              (= record.material plane.material))
+              (= record.normal box.frontNorm)
+              (= record.material ~(mat/create-material {:type :blinn-phong
+                                                        :albedo [0.9999]
+                                                        :specular [0.99999]
+                                                        :roughness 0.1
+                                                        :index-of-refraction 2})))
 
         (=Sphere sphere (Sphere (vec3 0)
                                 0

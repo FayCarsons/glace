@@ -48,14 +48,10 @@
       (do (maximize-canvas gl.canvas {:square? true})
           (canvas-resolution gl)))))
 
-
-
-
-
 (defn get-camera [camera-position look-at]
   (let [cw (normalize (map - look-at camera-position))
         cu (normalize (cross cw c/up))
-        cv (cross cu cw)]
+        cv (normalize (cross cu cw))]
     [cu
      cv
      cw]))

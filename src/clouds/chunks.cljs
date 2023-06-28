@@ -12,6 +12,34 @@
                 depth))
           (dot ray.dir normal)))}}})
 
+(def AABB-intersection 
+  '{:functions 
+    {max-element
+     {([vec3] float)
+      ([v]
+       (max v.x (max v.y v.z)))}
+     min-element
+     {([vec3] float)
+      ([v]
+       (min v.x (min v.y v.z)))}
+     ;add t (distance) arg, for pruning
+     ;see https://www.shadertoy.com/view/tl3XRN
+     intersect-aabb
+     {([Ray vec3 vec3 float] bool)
+      ([ray box-min box-max current-distance]
+       (=vec3 inverted-dir (- ray.dir))
+       (=vec3 t1 (* (- box-min ray.pos)
+                    inverted-dir))
+       (=vec3 t2 (* (- box-max ray.pos)
+                    inverted-dir))
+       (=vec3 min-vec (min t1 t2))
+       (=vec3 max-vec (max t1 t2))
+       (=float t-min (max-element min-vec))
+       (=float t-max (min-element max-vec))
+       (&& (>= t-max 0)
+           (<= t-min t-max)
+           (<= t-min t)))}}})
+
 (def worley-chunk
   (u/unquotable
    '{:functions

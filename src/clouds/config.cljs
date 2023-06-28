@@ -1,6 +1,9 @@
 (ns clouds.config
   (:require [sprog.util :as u]
             [clouds.materials :as mat]
+            [clouds.bvh :refer [construct-bvh
+                                deconstruct-bvh
+                                AABB->box]]
             [clouds.sphere-packing :refer [get-sphere-data]]
             [fxrng.rng :refer [fxrand]]))
 (def u32-max-u "0xFFFFFFFFu")
@@ -9,7 +12,7 @@
 (def debug? false)
 
 ;camera
-(def camera-distance 1.25)
+(def camera-distance 1.75)
 (def cam-pos [0 0 (- camera-distance)])
 (def look-at [0 0 0])
 (def up [0 1 0])
@@ -19,9 +22,9 @@
                                 field-of-view))
 
 ;lighting
-(def light-pos '(vec3 -0.333 0 -1))
+(def light-pos '(vec3 1 1 -1))
 (def ambient-light-factor 0)
-(def sun-factor 0)
+(def sun-factor 0.25)
 (def skybox? false)
 (def gold-light? false)
 (def sky-color '(vec3 0.09 0.333 0.81))
@@ -95,14 +98,19 @@
 
 ;sphere packing
 (def num-packed-spheres 64)
-(def spheres (get-sphere-data num-packed-spheres {:init-sze (partial rand 0.2)
-                                                  :max-radius 0.5}))
+(def spheres (get-sphere-data num-packed-spheres {:init-sze (partial rand 0.1)
+                                                  :max-radius 0.333}))
+(def bvh (construct-bvh spheres 8 {:min [0 0 0]
+                                   :max [1 1 1]}))
+
 (def sphere-packing-expression 
   (u/unquotable
    (cons 'do
          (map (fn [sphere]
                 '(do (= sphere (Sphere ~(cons 'vec3
-                                              (map #(- % 0.5) sphere.position))
+                                              (map #(- % 
+                                                       0.5) 
+                                                   sphere.position))
                                        ~sphere.radius
                                        ~(rand-nth [mat/glass-material
                                                    mat/amber-glass-material
