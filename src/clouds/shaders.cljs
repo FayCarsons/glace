@@ -3,6 +3,7 @@
             [clouds.config :as c]
             [clouds.chunks :refer [worley-chunk
                                    raymarch-chunk
+                                   AABB-intersection
                                    plane-intersection]]
             [clouds.scenes :as i]
             [clouds.materials :as mat]
@@ -59,7 +60,7 @@
       :uniforms {size vec2
                  final usampler2D
                  skybox usampler2D
-                 bilateral? bool}
+                 debug usampler2D}
       :functions {aces-tonemap
                   {([vec3] vec3)
                    ([rgb]
@@ -82,18 +83,19 @@
                         (* ~c/max-brightness)
                         aces-tonemap))}}
       :main ((=vec2 pos (/ gl_FragCoord.xy size))
-             (do (=float r (.r (pixel-color (clamp (- pos
-                                                      ~c/aberration-offset)
-                                                   (vec2 0)
-                                                   (vec2 1)))))
-                 (=float g (.g (pixel-color pos)))
-                 (=float b (.b (pixel-color (clamp (+ pos
-                                                      ~c/aberration-offset)
-                                                   (vec2 0)
-                                                   (vec2 1))))))
-             (=vec3 color (gamma-correction (vec3 r g b)))
+
+             (=vec3 color (gamma-correction (pixel-color pos)))
              (= fragColor (vec4 (gamma-correction (aces-tonemap color))
-                                1)))})))
+                                1))
+
+             (= fragColor
+                ~(if c/debug?
+                   '(-> (texelFetch debug (ivec2 gl_FragCoord.xy) "0")
+                        .xyz
+                        vec3
+                        (/ ~u32-max)
+                        (vec4 1))
+                   'fragColor)))})))
 
 
 
@@ -108,8 +110,10 @@
     plane-intersection
     box-intersection-chunk
 
-    raymarch-chunk
-    i/dof-test
+    AABB-intersection
+    #_i/dof-test
+    c/bvh-traversal-chunk
+
     sphere-sdf-chunk
     box-frame-sdf-chunk
     box-sdf-chunk
@@ -127,19 +131,22 @@
     hsv-to-rgb-chunk
     pcg-hash-chunk
     '{:constants ~mat/materials-map
-      :defines {(fudge x) (* x ~c/fudge-factor)}
+      :defines {(fudge x) (* x
+                             ~c/fudge-factor)}
       :outputs {Color uvec4
                 Position uvec4
                 Direction uvec4
                 Accumulated uvec4
                 Attenuation uvec4
-                Meta uvec4}
+                Meta uvec4
+                Debug uvec4}
       :layout {Color 0
                Position 1
                Direction 2
                Accumulated 3
                Attenuation 4
-               Meta 5}
+               Meta 5
+               Debug 6}
       :uniforms {size vec2
                  camera mat3
                  rand-offset vec3
@@ -150,7 +157,8 @@
                  attenuation-tex usampler2D
                  ray-meta-tex usampler2D
                  skybox usampler2D
-                 frame float}
+                 frame float
+                 sphere-array [vec4 ~(str c/num-packed-spheres)]}
       :structs {Ray
                 [pos vec3
                  dir vec3
@@ -484,7 +492,8 @@
                       ~c/sky-gold)
                   '(vec3 ~c/ambient-light-factor)))
             ~c/sun-expression))}}
-      :main ((=vec2 pos (+ (getPos)
+      :main ((= Debug (uvec4 0 0 0 0))
+             (=vec2 pos (+ (getPos)
                            (* 0.05
                               (/ size))))
              (=ivec2 frag-pos (ivec2 gl_FragCoord.xy))
@@ -510,7 +519,7 @@
                                (- (/ lense
                                      ~c/depth-of-field-distance))))
 
-             (=vec3 current-direction (if (== step "0")
+             (=vec3 current-direction (if ~(if c/debug? true '(== step "0"))
                                         (normalize (* (inverse camera)
                                                       (vec3 bi-pos
                                                             ~c/field-of-view)))
@@ -522,7 +531,7 @@
                                             uni->bi)))
 
              (=Ray ray
-                   (Ray (if (== step "0")
+                   (Ray (if ~(if c/debug? true '(== step "0"))
                           ~(cons 'vec3 c/cam-pos)
                           (-> ray-pos-tex
                               (texelFetch frag-pos "0")
@@ -628,3 +637,5 @@
                                              (max 0)))
                                     ~u32-max)
                                  (uvec3 "0u"))))})))
+
+(u/log trace-frag)

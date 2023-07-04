@@ -2,6 +2,6 @@
  {thheller/shadow-cljs
   {:mvn/version "2.19.1"}
   io.github.Ella-Hoeppner/sprog
-  {:git/sha "1a95eea34c3a601e529aa7845de524b83d3964fe"}
+  {:git/sha "3062239170360a5e3fd987e7a563a5134addd8dc"}
   io.github.Ella-Hoeppner/fxrng 
   {:git/sha "720dee7487bd2d260fcc68fad7fc4f68029a8873"}}}

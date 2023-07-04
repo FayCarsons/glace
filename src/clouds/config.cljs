@@ -4,7 +4,8 @@
             [clojure.walk :refer [prewalk
                                   walk
                                   postwalk]]
-            [clouds.bvh  :refer [get-bvh]]
+            [clouds.bvh  :refer [get-bvh
+                                 create-bvh-traversal-chunk]]
             [clouds.sphere-packing :refer [get-sphere-data]]
             [fxrng.rng :refer [fxrand]]))
 (def u32-max-u "0xFFFFFFFFu")
@@ -13,8 +14,8 @@
 (def debug? false)
 
 ;camera
-(def camera-distance 0.9)
-(def cam-pos [0 0 (- camera-distance)])
+(def camera-distance 3)
+(def cam-pos [0 0 camera-distance])
 (def look-at [0 0 0])
 (def up [0 1 0])
 (def field-of-view 2.5)
@@ -25,7 +26,7 @@
 ;lighting
 (def light-pos '(vec3 1 1 -1))
 (def ambient-light-factor 0)
-(def sun-factor 0)
+(def sun-factor 1)
 (def skybox? false)
 (def gold-light? false)
 (def sky-color '(vec3 0.09 0.333 0.81))
@@ -98,34 +99,35 @@
 (def sphere-fbm-falloff 0.5)
 
 ;sphere packing
-(def num-packed-spheres 64)
+(def num-packed-spheres 128)
 (def spheres
-  (get-sphere-data num-packed-spheres {:init-sze (partial rand 0.1)
-                                       :max-radius 0.333}))
+  (get-sphere-data num-packed-spheres {:init-sze (partial fxrand 0.2)}))
+ 
+(def bvh (get-bvh spheres
+                  4
+                  {:min [0 0 0]
+                   :max [1 1 1]}))
 
-(def test-node (get-bvh spheres
-                        8
-                        {:min [0 0 0]
-                         :max [1 1 1]}))
-(u/pretty-log (map-indexed vector (:nodes test-node)))
+(def sphere-array
+  (vec (mapcat (fn [{:keys [position radius]}]
+                 (conj (vec position) radius))
+               (:primitives bvh))))
 
-#_(u/pretty-log
- (deconstruct-bvh bvh))
-
-
-
-
-
+ (def bvh-traversal-chunk 
+   (let [{:keys [depth structs]}
+         bvh]
+     (create-bvh-traversal-chunk depth structs)))
 
 (def sphere-packing-expression 
   (u/unquotable
    (cons 'do
          (map (fn [sphere]
                 '(do (= sphere (Sphere ~(cons 'vec3
-                                              (map #(- % 
-                                                       0.5) 
+                                              (map #(-> %
+                                                        (* 2)
+                                                        (- 1))
                                                    sphere.position))
-                                       ~sphere.radius
+                                       ~(* 2 sphere.radius)
                                        ~(rand-nth [mat/glass-material
                                                    mat/amber-glass-material
                                                    mat/metallic-material
@@ -190,56 +192,6 @@
                            (= record.material sphere.material))))
               spheres))))
 
-(def dof-test-sphere 
-  (u/unquotable
-   (let [sqrt-num-spheres 16]
-     (cons 'do
-           (map (fn [coord]
-                  '(do (= sphere (Sphere ~(cons 'vec3
-                                                (concat (map +
-                                                             coord
-                                                             (u/gen 2 (- (rand 0.1) 0.05))) 
-                                                        (list (rand))))
-                                         ~(+ 0.025 
-                                             (rand 0.05))
-                                         ~(rand-nth [mat/glass-material
-                                                     mat/amber-glass-material
-                                                     mat/metallic-material
-                                                     mat/diffuse-material
-                                                     mat/glass-material
-                                                     mat/amber-glass-material
-                                                     mat/metallic-material
-                                                     mat/diffuse-material
-                                                     mat/emitter-material
-                                                     (mat/create-material
-                                                      {:type :blinn-phong
-                                                       :albedo [0.99]
-                                                       :specular [0.99]
-                                                       :roughenss 0.1})
-                                                     (mat/create-material
-                                                      {:type :blinn-phong
-                                                       :albedo [0.99]
-                                                       :specular [0.99]
-                                                       :roughenss 0.1})
-                                                     (mat/create-material {:type :lommel
-                                                                           :albedo [0.9 0.6 0.3]
-                                                                           :roughness 0.8})])))
-                       (= current-distance (.x (findSphereIntersections ray
-                                                                        sphere.pos
-                                                                        sphere.radius)))
-                       ("if" (&& (> current-distance 0)
-                                 (< current-distance record.distance))
-                             (= record.hit true)
-                             (= record.distance current-distance)
-                             (= record.point (ray-at ray record.distance))
-                             (= record.normal (normalize (- record.point
-                                                            sphere.pos)))
-                             (= record.material sphere.material))))
-                (for [x (range sqrt-num-spheres)
-                      y (range sqrt-num-spheres)]
-                  (list (- (/ x sqrt-num-spheres) 
-                           0.5)
-                        (- (/ y sqrt-num-spheres)
-                           0.5))))))))
+
 
 

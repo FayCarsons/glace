@@ -1,8 +1,11 @@
 (ns clouds.scenes
   (:require [sprog.util :as u]
             [clouds.config :as c]
-            [sprog.iglu.core :refer [iglu->glsl]]
+            [sprog.iglu.core :refer [iglu->glsl
+                                     combine-chunks]]
             [clouds.materials :as mat]))
+
+
 
 (def dof-test
   (u/unquotable
@@ -13,12 +16,12 @@
         (=Record record ~mat/default-record)
 
 
-        (=BoxIntersection box (findBoxIntersection ray
+        #_(=BoxIntersection box (findBoxIntersection ray
                                                    (vec3 0 -1 0)
                                                    (vec3 10 0 10)))
-        (=float current-distance box.frontDist)
+        (=float current-distance 0xFFFFFFFF)
 
-        ("if" (> current-distance 0)
+        #_("if" (> current-distance 0)
               (= record.hit true)
               (= record.distance current-distance)
               (= record.point (ray-at ray record.distance))

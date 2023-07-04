@@ -31,7 +31,7 @@
              (u/log "bilateral: " new)))
 
 (defn expand-canvas [gl]
-  (maximize-canvas gl.canvas {}))
+  (maximize-canvas gl.canvas {:max-pixel-ratio 0.5}))
 
 (defn set-resolution [gl]
   (let [manual-resolution (vec
@@ -75,8 +75,8 @@
                       color-texs
                       ray-meta-texs
                       worley-tex
-                      sphere-data
-                      camera-matrix]
+                      camera-matrix
+                      debug-tex]
                :as state}]
   (if @render?
     (let [[front-pos-tex back-pos-tex] ray-pos-texs
@@ -92,7 +92,7 @@
                              "frame" frame
                              "rand-offset" (u/genv 3 (- (rand 2000)
                                                         1000))
-                             
+
                              "ray-pos-tex" front-pos-tex
                              "ray-dir-tex" front-dir-tex
                              "color-tex" front-color-tex
@@ -101,13 +101,16 @@
                              "ray-meta-tex" front-meta-tex
 
                              "skybox" worley-tex
-                             "camera" (vec (flatten camera-matrix))}
+                             "camera" (vec (flatten camera-matrix))
+
+                             "sphere-array" c/sphere-array}
                             {:target [back-color-tex
                                       back-pos-tex
                                       back-dir-tex
                                       back-accumulation-tex
                                       back-attenuation-tex
-                                      back-meta-tex]})
+                                      back-meta-tex
+                                      debug-tex]})
       (-> state
           (update :color-texs reverse)
           (update :ray-pos-texs reverse)
@@ -119,14 +122,15 @@
 
 (defn render! [{:keys [gl resolution 
                        worley-tex 
-                       accumulation-texs] :as state}]
+                       accumulation-texs
+                       debug-tex] :as state}]
   (run-purefrag-shader! gl
                         s/render-frag
                         resolution
                         {"size" resolution
                          "skybox" worley-tex
                          "final" (first accumulation-texs)
-                         "bilateral?" @bilateral?})
+                         "debug" debug-tex})
   state)
 
 (defn update-page! [{:keys [] :as state}]
@@ -138,12 +142,12 @@
 
 (defn init-page! [gl]
   (expand-canvas gl)
-  
   (let [resolution (canvas-resolution gl)]
     {:gl gl
      :frame 0
      :resolution resolution
      :camera-matrix (get-camera c/cam-pos c/look-at)
+     :debug-tex (create-tex gl :u32 resolution)
      :worley-tex (get-skybox! gl resolution) 
      :color-texs (u/genv 2 (create-tex gl :u32 resolution))
      :accumulation-texs (u/genv 2 (create-tex gl :u32 resolution))
@@ -161,6 +165,7 @@
   (init))
 
 (defn pre-init []
+  (js/eval "(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='//mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()")
   (add-key-callback "r"
                     (fn []
                       (swap! render? not)))

@@ -27,7 +27,7 @@
      intersect-aabb
      {([Ray vec3 vec3 float] bool)
       ([ray box-min box-max current-distance]
-       (=vec3 inverted-dir (- ray.dir))
+       (=vec3 inverted-dir (/ ray.dir))
        (=vec3 t1 (* (- box-min ray.pos)
                     inverted-dir))
        (=vec3 t2 (* (- box-max ray.pos)
@@ -38,7 +38,40 @@
        (=float t-max (min-element max-vec))
        (&& (>= t-max 0)
            (<= t-min t-max)
-           (<= t-min t)))}}})
+           (<= t-min current-distance)))}}})
+
+;Moller et Trumbore "Fast, Minimum storage ray-triangle intersection"
+(def triangle-chunk 
+  '{:structs 
+    {Triangle 
+     [v1 vec3
+      v2 vec3 
+      v3 vec3]}})
+
+(def triangle-intersection-chunk 
+  '{:functions
+    {intersect-triangle
+     {([Ray Triangle Record] Record)
+      ([ray  tri rec]
+       (=vec3 e1 (- tri.v2 tri.v1))
+       (=vec3 e2 (- tri.v3 tri.v1))
+       (= rec.normal (cross e1 e2))
+       (=float determinant (- (dot ray.dir rec.normal)))
+       (=float inv-det (/ determinant))
+       (=vec3 AO (- ray.pos tri.v1))
+       (=vec3 DAO (cross ray.dir AO))
+       ;what are u and v ? they are outs in original
+       (=float u (* (dot e2 DAO)
+                    inv-det))
+       (=float v (* (- (dot e1 DAO))
+                    inv-det))
+       (=float t (* (dot AO rec.normal)
+                    inv-det))
+       (&& (>= determinant 1e-6)
+           (>= t 0)
+           (>= u 0)
+           (>= v 0)
+           (<= (+ u v) 1)))}}})
 
 (def worley-chunk
   (u/unquotable

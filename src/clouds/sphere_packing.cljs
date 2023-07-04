@@ -4,10 +4,6 @@
             [fxrng.rng :refer [fxrand
                                fxrand-normals]]))
 
-
-
-
-
 (defn distance [vec-one vec-two]
   (magnitude (map - vec-one vec-two)))
 
@@ -16,6 +12,13 @@
   (get-distance [this point]
     (- (distance this.position point)
        this.radius))
+  (bounds [this]
+    {:min (map #(- %
+                   this.radius)
+               this.position)
+     :max (map #(+ %
+                   this.radius)
+               this.position)})
   (flat [this]
     (conj this.position
           this.radius)))
@@ -24,17 +27,16 @@
                                    init-size
                                    max-radius]
                             :or {dimensions 3
-                                 init-size (rand 0.333)}}]
+                                 init-size (fxrand 0.333)}}]
   (letfn [(get-rand-point []
-                          
-                          (map #(->> %
-                                     (u/scale -2 2 0 1)
-                                     (u/clamp 0 1))
-                               (fxrand-normals dimensions)))]
-    (loop [spheres [(Sphere. (get-rand-point)
-                             (if (fn? init-size)
-                               (init-size)
-                               init-size))]]
+                          (mapv #(->> %
+                                      (u/scale -2 2 0 1)
+                                      (u/clamp 0 1))
+                                (fxrand-normals dimensions)))]
+    (loop [spheres [(->Sphere (get-rand-point)
+                              (if (fn? init-size)
+                                (init-size)
+                                init-size))]]
       (let [new-sphere (loop [point (get-rand-point)]
                          (let [min-distance (apply min
                                                    (map (fn [sphere]
@@ -46,10 +48,10 @@
                                     (every? #(< min-distance %
                                                 (- 1 min-distance))
                                             point))
-                             (Sphere. point
-                                      (if max-radius
-                                        (min min-distance max-radius)
-                                        min-distance))
+                             (->Sphere point
+                                       (if max-radius
+                                         (min min-distance max-radius)
+                                         min-distance))
                              (recur (get-rand-point)))))]
         (if (< (count spheres) (dec n))
           (recur (conj spheres new-sphere))
